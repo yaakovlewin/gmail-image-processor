@@ -95,8 +95,8 @@ const CONSTANTS = {
 // Type definitions
 interface EmailData {
 	id: string;
-	subject: string;
-	from: string;
+	subject?: string;
+	from?: string;
 	payload: any;
 	parsedHeaders?: {
 		from?: {
@@ -295,7 +295,7 @@ export default {
 		// === LOGGING METHODS ===
 		logEmailProcessingStart(email: EmailData): void {
 			console.log(
-				`📧 Processing email: "${email.subject}" from ${email.from}`
+				`📧 Processing email: "${email.subject || 'No Subject'}" from ${email.from || 'Unknown'}`
 			);
 		},
 
@@ -340,7 +340,7 @@ export default {
 			const self = this as any;
 			const result: ProcessingResult = {
 				emailId: email.id,
-				subject: email.subject,
+				subject: email.subject || 'No Subject',
 				senderInfo,
 				images: extractedImages,
 				processedAt: new Date().toISOString(),
@@ -380,13 +380,13 @@ export default {
 				console.warn(
 					"⚠️ Pre-parsed sender data not available, falling back to manual parsing"
 				);
-				return this.fallbackSenderExtraction(email.from);
+				return this.fallbackSenderExtraction(email.from || '');
 			} catch (error) {
 				console.warn(
 					"Failed to extract sender from trigger data:",
 					error
 				);
-				return this.fallbackSenderExtraction(email.from);
+				return this.fallbackSenderExtraction(email.from || '');
 			}
 		},
 
@@ -395,10 +395,10 @@ export default {
 		},
 
 		createSenderInfoFromParsed(parsedFrom: { name?: string; email: string }, email: EmailData): SenderInfo {
-			const name = parsedFrom.name || parsedFrom.email.split("@")[0];
+			const name: string = parsedFrom.name || parsedFrom.email.split("@")[0] || 'Unknown';
 			const senderInfo: SenderInfo = {
 				email: parsedFrom.email,
-				name,
+				name: name,
 				displayName: name,
 				folderName: "",
 				rawFrom:
@@ -443,10 +443,10 @@ export default {
 			const nameRegex = /^([^<]+)</;
 
 			const emailMatch = fromHeader.match(emailRegex);
-			if (emailMatch) {
+			if (emailMatch && emailMatch[1]) {
 				senderInfo.email = emailMatch[1].trim();
 				const nameMatch = fromHeader.match(nameRegex);
-				if (nameMatch) {
+				if (nameMatch && nameMatch[1]) {
 					senderInfo.name = nameMatch[1].trim().replace(/"/g, "");
 				}
 			} else {
@@ -456,9 +456,9 @@ export default {
 
 		finalizeSenderInfo(senderInfo: SenderInfo): void {
 			if (!senderInfo.name && senderInfo.email) {
-				senderInfo.name = senderInfo.email.split("@")[0];
+				senderInfo.name = senderInfo.email.split("@")[0] || 'Unknown';
 			}
-			senderInfo.displayName = senderInfo.name || senderInfo.email;
+			senderInfo.displayName = senderInfo.name || senderInfo.email || 'Unknown';
 			senderInfo.folderName = this.sanitizeFolderName(
 				senderInfo.displayName
 			);
@@ -599,12 +599,14 @@ export default {
 
 			for (const match of matches) {
 				const fileId = match[1];
-				const driveLink = await this.createDriveLinkInfo(
-					fileId,
-					match[0]
-				);
-				if (driveLink) {
-					driveLinks.push(driveLink);
+				if (fileId) {
+					const driveLink = await this.createDriveLinkInfo(
+						fileId,
+						match[0]
+					);
+					if (driveLink) {
+						driveLinks.push(driveLink);
+					}
 				}
 			}
 		},
@@ -621,9 +623,9 @@ export default {
 					return {
 						type: "drive_link",
 						fileId,
-						filename: metadata.name,
+						filename: metadata.name || `drive-file-${fileId}`,
 						mimeType: metadata.mimeType,
-						size: parseInt(metadata.size) || 0,
+						size: parseInt(metadata.size || '0') || 0,
 						url,
 					};
 				}
@@ -908,7 +910,7 @@ export default {
 		},
 
 		isImageMimeType(mimeType: string): boolean {
-			return CONSTANTS.IMAGE_TYPES.includes(mimeType);
+			return (CONSTANTS.IMAGE_TYPES as readonly string[]).includes(mimeType);
 		},
 
 		generateFilename(mimeType: string): string {
@@ -1006,7 +1008,10 @@ export default {
 			const bytes = new Uint8Array(imageBuffer);
 			let binary = '';
 			for (let i = 0; i < bytes.byteLength; i++) {
-				binary += String.fromCharCode(bytes[i]);
+				const byte = bytes[i];
+				if (byte !== undefined) {
+					binary += String.fromCharCode(byte);
+				}
 			}
 			return btoa(binary);
 		},
