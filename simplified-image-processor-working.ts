@@ -1,96 +1,16 @@
-// Simplified Image Processor - TypeScript Version (Exact Parity with Working JS)
+// Simplified Image Processor - TypeScript Version (Phase 2: Modularized)
 // Combines image detection, extraction, and sender parsing into one streamlined component
 
-// Constants - Embedded directly for reliability (like the original)
-const CONSTANTS = {
-	FILE_SIZE: {
-		BYTES_PER_MB: 1024 * 1024,
-		UNITS: ["Bytes", "KB", "MB", "GB"],
-		CONVERSION_FACTOR: 1024,
-	},
-	IMAGE_TYPES: [
-		"image/jpeg",
-		"image/jpg",
-		"image/png",
-		"image/gif",
-		"image/webp",
-		"image/bmp",
-		"image/tiff",
-		"image/svg+xml",
-	],
-	DRIVE_PATTERNS: [
-		/https:\/\/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/,
-		/https:\/\/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/,
-		/https:\/\/drive\.google\.com\/uc\?id=([a-zA-Z0-9_-]+)/,
-	],
-	VISION_API: {
-		URL: "https://vision.googleapis.com/v1/images:annotate",
-		// Labels that indicate non-content images to filter out
-		NON_CONTENT_LABELS: [
-			// Logos and branding
-			"logo",
-			"brand",
-			"trademark",
-			"emblem",
-			"symbol",
-			"icon",
-			"badge",
-			"seal",
-
-			// Email signatures and footers
-			"signature",
-			"email signature",
-			"footer",
-			"watermark",
-
-			// Tracking and technical elements
-			"tracking pixel",
-			"pixel",
-			"beacon",
-			"tracker",
-
-			// UI elements and buttons
-			"button",
-			"interface",
-			"menu",
-			"navigation",
-			"toolbar",
-			"widget",
-
-			// Social media icons
-			"social media",
-			"facebook icon",
-			"twitter icon",
-			"linkedin icon",
-			"instagram icon",
-			"youtube icon",
-
-			// Generic non-content indicators
-			"clipart",
-			"graphic design",
-			"template",
-			"placeholder",
-		],
-		// Minimum image dimensions to avoid tiny tracking pixels
-		MIN_IMAGE_SIZE: {
-			WIDTH: 100,
-			HEIGHT: 100,
-		},
-		CONFIDENCE_THRESHOLD: 0.6, // Lowered for better detection
-		HIGH_CONFIDENCE_THRESHOLD: 0.8, // For stricter filtering
-		MAX_LOGO_RESULTS: 10,
-		MAX_LABEL_RESULTS: 20,
-	},
-	GMAIL_API: {
-		BASE_URL: "https://gmail.googleapis.com/gmail/v1/users/me",
-	},
-	TEXT_MIME_TYPES: ["text/plain", "text/html"],
-	FOLDER_NAME: {
-		MAX_LENGTH: 50,
-		INVALID_CHARS: /[<>:"/\\|?*]/g,
-		FALLBACK: "Unknown Sender",
-	},
-} as const;
+// Import consolidated constants from external module
+import { 
+	FILE_SIZE,
+	IMAGE_TYPES,
+	DRIVE_PATTERNS,
+	VISION_API,
+	GMAIL_API,
+	TEXT_MIME_TYPES,
+	FOLDER_NAME
+} from "./common/constants.js";
 
 // Type definitions
 interface EmailData {
@@ -477,12 +397,12 @@ export default {
 		sanitizeFolderName(name: string): string {
 			return (
 				name
-					.replace(CONSTANTS.FOLDER_NAME.INVALID_CHARS, "_")
+					.replace(FOLDER_NAME.INVALID_CHARS, "_")
 					.replace(/_{2,}/g, "_")
 					.replace(/^_|_$/g, "")
 					.trim()
-					.substring(0, CONSTANTS.FOLDER_NAME.MAX_LENGTH) ||
-				CONSTANTS.FOLDER_NAME.FALLBACK
+					.substring(0, FOLDER_NAME.MAX_LENGTH) ||
+				FOLDER_NAME.FALLBACK
 			);
 		},
 
@@ -581,7 +501,7 @@ export default {
 				return driveLinks;
 			}
 
-			for (const pattern of CONSTANTS.DRIVE_PATTERNS) {
+			for (const pattern of DRIVE_PATTERNS) {
 				await this.processDrivePattern(
 					pattern,
 					textContent,
@@ -671,7 +591,7 @@ export default {
 		},
 
 		isTextMimeType(mimeType: string): boolean {
-			return (CONSTANTS.TEXT_MIME_TYPES as readonly string[]).includes(mimeType);
+			return (TEXT_MIME_TYPES as readonly string[]).includes(mimeType);
 		},
 
 		// === IMAGE EXTRACTION ===
@@ -817,7 +737,7 @@ export default {
 			const { axios } = await import("@pipedream/platform") as any;
 			const self = this as any;
 			return await axios(this, {
-				url: `${CONSTANTS.GMAIL_API.BASE_URL}/messages/${messageId}/attachments/${attachmentId}`,
+				url: `${GMAIL_API.BASE_URL}/messages/${messageId}/attachments/${attachmentId}`,
 				headers: {
 					Authorization: `Bearer ${self.gmail.$auth.oauth_access_token}`,
 				},
@@ -905,12 +825,12 @@ export default {
 		exceedsMaxSize(fileSize: number): boolean {
 			const self = this as any;
 			const maxSizeBytes =
-				(self.maxFileSize || 25) * CONSTANTS.FILE_SIZE.BYTES_PER_MB;
+				(self.maxFileSize || 25) * FILE_SIZE.BYTES_PER_MB;
 			return fileSize > maxSizeBytes;
 		},
 
 		isImageMimeType(mimeType: string): boolean {
-			return (CONSTANTS.IMAGE_TYPES as readonly string[]).includes(mimeType);
+			return (IMAGE_TYPES as readonly string[]).includes(mimeType);
 		},
 
 		generateFilename(mimeType: string): string {
@@ -922,7 +842,7 @@ export default {
 		formatFileSize(bytes: number): string {
 			if (bytes === 0) return "0 Bytes";
 
-			const { UNITS, CONVERSION_FACTOR } = CONSTANTS.FILE_SIZE;
+			const { UNITS, CONVERSION_FACTOR } = FILE_SIZE;
 			const i = Math.floor(Math.log(bytes) / Math.log(CONVERSION_FACTOR));
 			const size = parseFloat(
 				(bytes / Math.pow(CONVERSION_FACTOR, i)).toFixed(2)
@@ -1042,7 +962,7 @@ export default {
 				const self = this as any;
 				const apiPromise = axios(this, {
 					method: "POST",
-					url: CONSTANTS.VISION_API.URL,
+					url: VISION_API.URL,
 					headers: {
 						Authorization: `Bearer ${self.googleCloudVision.$auth.oauth_access_token}`,
 						"Content-Type": "application/json",
@@ -1072,12 +992,12 @@ export default {
 							{
 								type: "LOGO_DETECTION",
 								maxResults:
-									CONSTANTS.VISION_API.MAX_LOGO_RESULTS,
+									VISION_API.MAX_LOGO_RESULTS,
 							},
 							{
 								type: "LABEL_DETECTION",
 								maxResults:
-									CONSTANTS.VISION_API.MAX_LABEL_RESULTS,
+									VISION_API.MAX_LABEL_RESULTS,
 							},
 							{
 								type: "IMAGE_PROPERTIES",
@@ -1146,7 +1066,7 @@ export default {
 
 				// Check against our comprehensive non-content labels list
 				if (
-					CONSTANTS.VISION_API.NON_CONTENT_LABELS.includes(labelText)
+					VISION_API.NON_CONTENT_LABELS.includes(labelText)
 				) {
 					if (label.score >= confidenceThreshold) {
 						console.log(
@@ -1193,12 +1113,12 @@ export default {
 			const strength = self.visionFilteringStrength || "balanced";
 			switch (strength) {
 				case "conservative":
-					return CONSTANTS.VISION_API.HIGH_CONFIDENCE_THRESHOLD;
+					return VISION_API.HIGH_CONFIDENCE_THRESHOLD;
 				case "aggressive":
-					return CONSTANTS.VISION_API.CONFIDENCE_THRESHOLD - 0.2;
+					return VISION_API.CONFIDENCE_THRESHOLD - 0.2;
 				case "balanced":
 				default:
-					return CONSTANTS.VISION_API.CONFIDENCE_THRESHOLD;
+					return VISION_API.CONFIDENCE_THRESHOLD;
 			}
 		},
 

@@ -1,22 +1,27 @@
 // File size and validation constants
 export const FILE_SIZE = {
+	BYTES_PER_MB: 1024 * 1024,
+	UNITS: ["Bytes", "KB", "MB", "GB"],
+	CONVERSION_FACTOR: 1024,
 	MAX_SIZE_MB: 25,
 	MAX_SIZE_BYTES: 25 * 1024 * 1024,
 	TINY_IMAGE_THRESHOLD: 1024, // 1KB - likely tracking pixels
 } as const;
 
 // Supported image types
-export const IMAGE_TYPES = {
-	SUPPORTED_MIME_TYPES: [
-		"image/jpeg",
-		"image/jpg",
-		"image/png",
-		"image/gif",
-		"image/webp",
-		"image/bmp",
-		"image/tiff",
-		"image/svg+xml",
-	],
+export const IMAGE_TYPES = [
+	"image/jpeg",
+	"image/jpg", 
+	"image/png",
+	"image/gif",
+	"image/webp",
+	"image/bmp",
+	"image/tiff",
+	"image/svg+xml",
+] as const;
+
+export const IMAGE_CONFIG = {
+	SUPPORTED_MIME_TYPES: IMAGE_TYPES,
 	SUPPORTED_EXTENSIONS: [
 		".jpg",
 		".jpeg",
@@ -30,6 +35,8 @@ export const IMAGE_TYPES = {
 } as const;
 
 // Text content types for parsing
+export const TEXT_MIME_TYPES = ["text/plain", "text/html"] as const;
+
 export const TEXT_TYPES = {
 	SUPPORTED_MIME_TYPES: [
 		"text/plain",
@@ -40,33 +47,73 @@ export const TEXT_TYPES = {
 	],
 } as const;
 
-// Google Drive URL patterns
+// Google Drive URL patterns (without global flag - added dynamically when needed)
 export const DRIVE_PATTERNS = [
-	/https:\/\/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/g,
-	/https:\/\/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/g,
-	/https:\/\/docs\.google\.com\/.*\/d\/([a-zA-Z0-9_-]+)/g,
+	/https:\/\/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/,
+	/https:\/\/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/,
+	/https:\/\/drive\.google\.com\/uc\?id=([a-zA-Z0-9_-]+)/,
 ] as const;
+
+// Gmail API configuration
+export const GMAIL_API = {
+	BASE_URL: "https://gmail.googleapis.com/gmail/v1/users/me",
+} as const;
+
+// Folder naming constants
+export const FOLDER_NAME = {
+	MAX_LENGTH: 50,
+	INVALID_CHARS: /[<>:"/\\|?*]/g,
+	FALLBACK: "Unknown Sender",
+} as const;
 
 // Google Cloud Vision API configuration
 export const VISION_API = {
+	URL: "https://vision.googleapis.com/v1/images:annotate",
+	
+	// Minimum image dimensions to avoid tiny tracking pixels
+	MIN_IMAGE_SIZE: {
+		WIDTH: 100,
+		HEIGHT: 100,
+	},
+	
+	CONFIDENCE_THRESHOLD: 0.6, // Lowered for better detection
+	HIGH_CONFIDENCE_THRESHOLD: 0.8, // For stricter filtering
+	MAX_LOGO_RESULTS: 10,
+	MAX_LABEL_RESULTS: 20,
+	
 	// Non-content image labels to filter out
 	NON_CONTENT_LABELS: [
-		// UI Elements & Icons
-		"icon",
+		// Logos and branding
 		"logo",
+		"brand",
+		"trademark",
+		"emblem",
 		"symbol",
+		"icon",
+		"badge",
+		"seal",
+
+		// Email signatures and footers
+		"signature",
+		"email signature",
+		"footer",
+		"watermark",
+
+		// UI elements and buttons
 		"button",
 		"interface",
 		"menu",
-		"toolbar",
 		"navigation",
+		"toolbar",
+		"widget",
 		"cursor",
 		"pointer",
 		"arrow",
 		"chevron",
 		"hamburger",
 
-		// Tracking & Analytics
+		// Tracking and technical elements
+		"tracking pixel",
 		"pixel",
 		"beacon",
 		"tracker",
@@ -79,7 +126,13 @@ export const VISION_API = {
 		"spacer",
 		"separator",
 
-		// Social Media & Platforms
+		// Social media icons
+		"social media",
+		"facebook icon",
+		"twitter icon", 
+		"linkedin icon",
+		"instagram icon",
+		"youtube icon",
 		"facebook",
 		"twitter",
 		"instagram",
@@ -99,13 +152,9 @@ export const VISION_API = {
 		"subscribe",
 
 		// Branding & Marketing (non-content)
-		"watermark",
 		"stamp",
-		"seal",
-		"badge",
 		"emblem",
 		"insignia",
-		"trademark",
 		"copyright",
 		"brand mark",
 
@@ -131,6 +180,12 @@ export const VISION_API = {
 		"shape",
 		"geometric",
 		"abstract pattern",
+
+		// Generic non-content indicators
+		"clipart",
+		"graphic design",
+		"template",
+		"placeholder",
 	],
 
 	// Filtering strength configurations
