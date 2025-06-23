@@ -372,7 +372,7 @@ export default {
 
 				if (this.hasParsedSenderData(parsedFrom)) {
 					console.log(
-						`✅ Using pre-parsed sender data: ${parsedFrom!.name} <${parsedFrom!.email}>`
+						`✅ Using pre-parsed sender data: ${parsedFrom!.name || 'Unknown'} <${parsedFrom!.email}>`
 					);
 					return this.createSenderInfoFromParsed(parsedFrom!, email);
 				}
@@ -656,10 +656,8 @@ export default {
 
 		extractTextFromPart(part: any, callback: (content: string) => void): void {
 			if (this.isTextMimeType(part.mimeType) && part.body?.data) {
-				const decodedContent = (globalThis as any).Buffer.from(
-					part.body.data,
-					"base64"
-				).toString("utf-8");
+				// Use atob for base64 decoding in browser/Pipedream environment
+				const decodedContent = atob(part.body.data);
 				callback(decodedContent);
 			}
 
@@ -774,7 +772,7 @@ export default {
 
 		async cleanupTempFile(filePath: string): Promise<void> {
 			try {
-				const fs = await import("fs");
+				const fs = await import("fs") as any;
 				await fs.promises.unlink(filePath);
 			} catch (e) {
 				// Ignore cleanup errors
@@ -784,8 +782,8 @@ export default {
 		// === FILE DOWNLOAD METHODS ===
 		async downloadGmailAttachment(messageId: string, attachmentId: string, filename: string): Promise<{ filePath: string; size: number } | null> {
 			try {
-				const { axios } = await import("@pipedream/platform");
-				const fs = await import("fs");
+				const { axios } = await import("@pipedream/platform") as any;
+				const fs = await import("fs") as any;
 
 				const tmpFilePath = this.createTempFilePath(filename);
 				const response = await this.makeGmailAttachmentRequest(
@@ -794,9 +792,14 @@ export default {
 				);
 
 				if (response.data) {
-					const imageBuffer = (Buffer as any).from(response.data, "base64");
-					await fs.promises.writeFile(tmpFilePath, imageBuffer);
-					return { filePath: tmpFilePath, size: imageBuffer.length };
+					// Convert base64 to binary for file writing
+					const binaryString = atob(response.data);
+					const bytes = new Uint8Array(binaryString.length);
+					for (let i = 0; i < binaryString.length; i++) {
+						bytes[i] = binaryString.charCodeAt(i);
+					}
+					await fs.promises.writeFile(tmpFilePath, bytes);
+					return { filePath: tmpFilePath, size: bytes.length };
 				}
 
 				return null;
@@ -809,7 +812,7 @@ export default {
 		},
 
 		async makeGmailAttachmentRequest(messageId: string, attachmentId: string): Promise<any> {
-			const { axios } = await import("@pipedream/platform");
+			const { axios } = await import("@pipedream/platform") as any;
 			const self = this as any;
 			return await axios(this, {
 				url: `${CONSTANTS.GMAIL_API.BASE_URL}/messages/${messageId}/attachments/${attachmentId}`,
@@ -830,7 +833,7 @@ export default {
 			}
 
 			try {
-				const { axios } = await import("@pipedream/platform");
+				const { axios } = await import("@pipedream/platform") as any;
 
 				const response = await axios(this, {
 					method: "GET",
@@ -860,8 +863,8 @@ export default {
 			}
 
 			try {
-				const fs = await import("fs");
-				const { axios } = await import("@pipedream/platform");
+				const fs = await import("fs") as any;
+				const { axios } = await import("@pipedream/platform") as any;
 				const tmpFilePath = this.createTempFilePath(filename, "drive_");
 
 				const response = await axios(this, {
@@ -876,10 +879,12 @@ export default {
 					responseType: "arraybuffer",
 				});
 
-				await fs.promises.writeFile(tmpFilePath, (Buffer as any).from(response));
+				// Convert arraybuffer to Uint8Array for file writing
+				const bytes = new Uint8Array(response);
+				await fs.promises.writeFile(tmpFilePath, bytes);
 				return {
 					filePath: tmpFilePath,
-					size: (Buffer as any).byteLength(response),
+					size: bytes.length,
 				};
 			} catch (error: any) {
 				throw new Error(
@@ -967,7 +972,7 @@ export default {
 			try {
 				// Use sharp or similar library to get image dimensions
 				// For now, we'll use a basic approach with the file system
-				const fs = await import("fs");
+				const fs = await import("fs") as any;
 				const stats = await fs.promises.stat(imagePath);
 
 				// If file is very small, likely a tracking pixel
@@ -995,13 +1000,19 @@ export default {
 		},
 
 		async readImageAsBase64(imagePath: string): Promise<string> {
-			const fs = await import("fs");
+			const fs = await import("fs") as any;
 			const imageBuffer = await fs.promises.readFile(imagePath);
-			return imageBuffer.toString("base64");
+			// Convert buffer to base64 string
+			const bytes = new Uint8Array(imageBuffer);
+			let binary = '';
+			for (let i = 0; i < bytes.byteLength; i++) {
+				binary += String.fromCharCode(bytes[i]);
+			}
+			return btoa(binary);
 		},
 
 		async callVisionAPI(base64Image: string, filename: string): Promise<any> {
-			const { axios } = await import("@pipedream/platform");
+			const { axios } = await import("@pipedream/platform") as any;
 
 			try {
 				// Safety check: Skip if base64 image is too large (>10MB when encoded)
