@@ -155,6 +155,18 @@ interface VisionResult {
 	skipped?: boolean;
 }
 
+// Component interface for proper typing
+interface ComponentContext {
+	email?: any;
+	maxFileSize?: number;
+	enableVisionFiltering?: boolean;
+	googleCloudVision?: any;
+	visionFilteringStrength?: string;
+	skipTinyImages?: boolean;
+	gmail?: any;
+	googleDrive?: any;
+}
+
 export default {
 	name: "simplified-image-processor",
 	version: "2.0.0",
@@ -229,33 +241,34 @@ export default {
 		},
 	},
 
-	async run({ steps, $ }) {
-		const email = this.getEmailData(steps);
-		this.logEmailProcessingStart(email);
+	async run({ steps, $ }: { steps: any; $: any }): Promise<ProcessingResult> {
+		const self = this as any;
+		const email = self.getEmailData(steps);
+		self.logEmailProcessingStart(email);
 
 		try {
-			const senderInfo = this.extractSenderFromTrigger(email);
-			this.logSenderInfo(senderInfo);
+			const senderInfo = self.extractSenderFromTrigger(email);
+			self.logSenderInfo(senderInfo);
 
-			const detectedImages = await this.detectAllImages(email);
-			this.logDetectedImages(detectedImages);
+			const detectedImages = await self.detectAllImages(email);
+			self.logDetectedImages(detectedImages);
 
 			if (detectedImages.length === 0) {
-				return this.createNoImagesResult(email, senderInfo);
+				return self.createNoImagesResult(email, senderInfo);
 			}
 
-			const extractedImages = await this.extractAllImages(
+			const extractedImages = await self.extractAllImages(
 				detectedImages,
 				email.id
 			);
-			this.logExtractedImages(extractedImages);
-			this.logVisionFilteringStats(
+			self.logExtractedImages(extractedImages);
+			self.logVisionFilteringStats(
 				detectedImages.length,
 				extractedImages.length,
 				detectedImages.length - extractedImages.length
 			);
 
-			const result = this.createSuccessResult(
+			const result = self.createSuccessResult(
 				email,
 				senderInfo,
 				extractedImages
@@ -263,14 +276,16 @@ export default {
 			$.export("processed_images", result);
 			return result;
 		} catch (error) {
-			this.handleProcessingError(error);
+			self.handleProcessingError(error);
+			throw error; // This line will never be reached but satisfies TypeScript
 		}
 	},
 
 	methods: {
 		// === EMAIL DATA HANDLING ===
 		getEmailData(steps: any): EmailData {
-			const email = this.email || steps.trigger?.event;
+			const self = this as any;
+			const email = self.email || steps.trigger?.event;
 			if (!email) {
 				throw new Error("No email data provided from Gmail trigger");
 			}
@@ -301,7 +316,8 @@ export default {
 		},
 
 		logVisionFilteringStats(totalDetected: number, totalExtracted: number, filteredCount: number): void {
-			if (this.enableVisionFiltering && filteredCount > 0) {
+			const self = this as any;
+			if (self.enableVisionFiltering && filteredCount > 0) {
 				console.log(
 					`🔍 Vision filtering results: ${totalDetected} detected → ${totalExtracted} kept (${filteredCount} filtered out)`
 				);
