@@ -337,6 +337,7 @@ export default {
 		},
 
 		createSuccessResult(email: EmailData, senderInfo: SenderInfo, extractedImages: ExtractedImage[]): ProcessingResult {
+			const self = this as any;
 			const result: ProcessingResult = {
 				emailId: email.id,
 				subject: email.subject,
@@ -347,11 +348,11 @@ export default {
 			};
 
 			// Add Vision filtering information if enabled
-			if (this.enableVisionFiltering) {
+			if (self.enableVisionFiltering) {
 				result.visionFiltering = {
 					enabled: true,
-					strength: this.visionFilteringStrength || "balanced",
-					skipTinyImages: this.skipTinyImages || false,
+					strength: self.visionFilteringStrength || "balanced",
+					skipTinyImages: self.skipTinyImages || false,
 				};
 			}
 
@@ -654,7 +655,7 @@ export default {
 
 		extractTextFromPart(part: any, callback: (content: string) => void): void {
 			if (this.isTextMimeType(part.mimeType) && part.body?.data) {
-				const decodedContent = Buffer.from(
+				const decodedContent = (global as any).Buffer.from(
 					part.body.data,
 					"base64"
 				).toString("utf-8");
@@ -669,7 +670,7 @@ export default {
 		},
 
 		isTextMimeType(mimeType: string): boolean {
-			return CONSTANTS.TEXT_MIME_TYPES.includes(mimeType);
+			return (CONSTANTS.TEXT_MIME_TYPES as readonly string[]).includes(mimeType);
 		},
 
 		// === IMAGE EXTRACTION ===
@@ -752,7 +753,8 @@ export default {
 		},
 
 		async shouldSkipImageDueToVision(extractedImage: { filePath: string; size: number }, image: ImageAttachment): Promise<boolean> {
-			if (!this.enableVisionFiltering) return false;
+			const self = this as any;
+			if (!self.enableVisionFiltering) return false;
 
 			const visionCheck = await this.checkForLogoOrSignature(
 				extractedImage.filePath,
