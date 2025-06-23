@@ -1,0 +1,25 @@
+{
+	"name": "gmail-image-processor",
+	"version": "0.1.0",
+	"description": "Gmail Image Processor - Modular Pipedream Components",
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"dev": "tsc --watch",
+		"test": "node test-functionality-parity.mjs"
+	},
+	"devDependencies": {
+		"@pipedream/types": "^0.3.2",
+		"typescript": "^5.0.0"
+	},
+	"keywords": [
+		"pipedream",
+		"gmail",
+		"google-drive",
+		"image-processing",
+		"vision-api",
+		"typescript"
+	],
+	"author": "Pipedream Community",
+	"license": "MIT"
+}
