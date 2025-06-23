@@ -23,6 +23,6 @@
 		"isolatedModules": true,
 		"noEmit": false
 	},
-	"include": ["**/*.ts", "**/*.mts", "**/*.mjs"],
-	"exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.mjs"]
+	"include": ["**/*.ts", "**/*.mts"],
+	"exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.mjs", "actions/**/*.mjs"]
 }
