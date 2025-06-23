@@ -402,7 +402,7 @@ export default {
 				displayName: name,
 				folderName: "",
 				rawFrom:
-					email.from || `${parsedFrom.name} <${parsedFrom.email}>`,
+					email.from || `${parsedFrom.name || 'Unknown'} <${parsedFrom.email}>`,
 			};
 
 			senderInfo.folderName = this.sanitizeFolderName(
@@ -563,9 +563,10 @@ export default {
 		async findDriveLinks(email: EmailData): Promise<ImageAttachment[]> {
 			const driveLinks: ImageAttachment[] = [];
 			const textContent = this.extractAllTextContent(email.payload);
+			const self = this as any;
 
 			// Check if Google Drive is connected
-			if (!this.googleDrive) {
+			if (!self.googleDrive) {
 				console.warn(
 					`⚠️ Google Drive not connected - Drive links will be skipped. Please connect your Google Drive account in the workflow configuration.`
 				);
@@ -655,7 +656,7 @@ export default {
 
 		extractTextFromPart(part: any, callback: (content: string) => void): void {
 			if (this.isTextMimeType(part.mimeType) && part.body?.data) {
-				const decodedContent = (global as any).Buffer.from(
+				const decodedContent = (globalThis as any).Buffer.from(
 					part.body.data,
 					"base64"
 				).toString("utf-8");
@@ -793,7 +794,7 @@ export default {
 				);
 
 				if (response.data) {
-					const imageBuffer = Buffer.from(response.data, "base64");
+					const imageBuffer = (Buffer as any).from(response.data, "base64");
 					await fs.promises.writeFile(tmpFilePath, imageBuffer);
 					return { filePath: tmpFilePath, size: imageBuffer.length };
 				}
@@ -809,17 +810,19 @@ export default {
 
 		async makeGmailAttachmentRequest(messageId: string, attachmentId: string): Promise<any> {
 			const { axios } = await import("@pipedream/platform");
+			const self = this as any;
 			return await axios(this, {
 				url: `${CONSTANTS.GMAIL_API.BASE_URL}/messages/${messageId}/attachments/${attachmentId}`,
 				headers: {
-					Authorization: `Bearer ${this.gmail.$auth.oauth_access_token}`,
+					Authorization: `Bearer ${self.gmail.$auth.oauth_access_token}`,
 				},
 			});
 		},
 
 		async getDriveFileMetadata(fileId: string): Promise<any | null> {
+			const self = this as any;
 			// Check if Google Drive is properly connected
-			if (!this.googleDrive) {
+			if (!self.googleDrive) {
 				console.warn(
 					`⚠️ Google Drive not connected - skipping file ${fileId}`
 				);
@@ -833,7 +836,7 @@ export default {
 					method: "GET",
 					url: `https://www.googleapis.com/drive/v3/files/${fileId}`,
 					headers: {
-						Authorization: `Bearer ${this.googleDrive.$auth.oauth_access_token}`,
+						Authorization: `Bearer ${self.googleDrive.$auth.oauth_access_token}`,
 					},
 					params: {
 						fields: "id,name,mimeType,size,createdTime,modifiedTime",
@@ -850,8 +853,9 @@ export default {
 		},
 
 		async downloadDriveFile(fileId: string, filename: string): Promise<{ filePath: string; size: number }> {
+			const self = this as any;
 			// Check if Google Drive is properly connected
-			if (!this.googleDrive) {
+			if (!self.googleDrive) {
 				throw new Error("Google Drive not connected");
 			}
 
@@ -864,7 +868,7 @@ export default {
 					method: "GET",
 					url: `https://www.googleapis.com/drive/v3/files/${fileId}`,
 					headers: {
-						Authorization: `Bearer ${this.googleDrive.$auth.oauth_access_token}`,
+						Authorization: `Bearer ${self.googleDrive.$auth.oauth_access_token}`,
 					},
 					params: {
 						alt: "media",
@@ -872,10 +876,10 @@ export default {
 					responseType: "arraybuffer",
 				});
 
-				await fs.promises.writeFile(tmpFilePath, Buffer.from(response));
+				await fs.promises.writeFile(tmpFilePath, (Buffer as any).from(response));
 				return {
 					filePath: tmpFilePath,
-					size: Buffer.byteLength(response),
+					size: (Buffer as any).byteLength(response),
 				};
 			} catch (error: any) {
 				throw new Error(
@@ -892,8 +896,9 @@ export default {
 		},
 
 		exceedsMaxSize(fileSize: number): boolean {
+			const self = this as any;
 			const maxSizeBytes =
-				this.maxFileSize * CONSTANTS.FILE_SIZE.BYTES_PER_MB;
+				(self.maxFileSize || 25) * CONSTANTS.FILE_SIZE.BYTES_PER_MB;
 			return fileSize > maxSizeBytes;
 		},
 
@@ -921,7 +926,8 @@ export default {
 
 		// === VISION API METHODS ===
 		async checkForLogoOrSignature(imagePath: string, filename: string): Promise<VisionResult> {
-			if (!this.enableVisionFiltering || !this.googleCloudVision) {
+			const self = this as any;
+			if (!self.enableVisionFiltering || !self.googleCloudVision) {
 				return { isLogoOrSignature: false, skipped: true };
 			}
 
@@ -931,7 +937,7 @@ export default {
 				);
 
 				// First check image dimensions if enabled
-				if (this.skipTinyImages) {
+				if (self.skipTinyImages) {
 					const dimensionCheck = await this.checkImageDimensions(
 						imagePath,
 						filename
@@ -1017,11 +1023,12 @@ export default {
 					); // 30 second timeout
 				});
 
+				const self = this as any;
 				const apiPromise = axios(this, {
 					method: "POST",
 					url: CONSTANTS.VISION_API.URL,
 					headers: {
-						Authorization: `Bearer ${this.googleCloudVision.$auth.oauth_access_token}`,
+						Authorization: `Bearer ${self.googleCloudVision.$auth.oauth_access_token}`,
 						"Content-Type": "application/json",
 					},
 					data: this.createVisionAPIRequest(base64Image),
@@ -1166,7 +1173,9 @@ export default {
 		},
 
 		getConfidenceThreshold(): number {
-			switch (this.visionFilteringStrength) {
+			const self = this as any;
+			const strength = self.visionFilteringStrength || "balanced";
+			switch (strength) {
 				case "conservative":
 					return CONSTANTS.VISION_API.HIGH_CONFIDENCE_THRESHOLD;
 				case "aggressive":
