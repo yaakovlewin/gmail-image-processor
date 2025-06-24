@@ -22,80 +22,19 @@ import {
 	sanitizeFolderName
 } from "./common/utils.js";
 
-// Type definitions
-interface EmailData {
-	id: string;
-	subject?: string;
-	from?: string;
-	payload: any;
-	parsedHeaders?: {
-		from?: {
-			name?: string;
-			email: string;
-		};
-	};
-}
+// Import shared types
+import {
+	EmailData,
+	SenderInfo,
+	ImageAttachment,
+	ExtractedImage,
+	ProcessingResult,
+	VisionResult,
+	ComponentContext,
+	TextExtractionCallback
+} from "./common/types.js";
 
-interface SenderInfo {
-	email: string;
-	name: string;
-	displayName: string;
-	folderName: string;
-	rawFrom: string;
-}
 
-interface ImageAttachment {
-	type: 'attachment' | 'drive_link';
-	filename: string;
-	mimeType: string;
-	size: number;
-	attachmentId?: string;
-	partId?: string;
-	fileId?: string;
-	url?: string;
-}
-
-interface ExtractedImage extends ImageAttachment {
-	filePath: string;
-	extractedAt: string;
-}
-
-interface ProcessingResult {
-	emailId: string;
-	subject?: string;
-	senderInfo: SenderInfo;
-	images: ExtractedImage[];
-	processedAt?: string;
-	totalImages?: number;
-	skipped?: boolean;
-	reason?: string;
-	visionFiltering?: {
-		enabled: boolean;
-		strength: string;
-		skipTinyImages: boolean;
-	};
-}
-
-interface VisionResult {
-	isLogoOrSignature: boolean;
-	type?: string;
-	description?: string;
-	confidence?: number;
-	error?: string;
-	skipped?: boolean;
-}
-
-// Component interface for proper typing
-interface ComponentContext {
-	email?: any;
-	maxFileSize?: number;
-	enableVisionFiltering?: boolean;
-	googleCloudVision?: any;
-	visionFilteringStrength?: string;
-	skipTinyImages?: boolean;
-	gmail?: any;
-	googleDrive?: any;
-}
 
 export default {
 	name: "simplified-image-processor",
@@ -564,7 +503,7 @@ export default {
 			return textContent;
 		},
 
-		extractTextFromPayload(payload: any, callback: (content: string) => void): void {
+		extractTextFromPayload(payload: any, callback: TextExtractionCallback): void {
 			if (payload.parts) {
 				payload.parts.forEach((part: any) =>
 					this.extractTextFromPart(part, callback)
@@ -574,7 +513,7 @@ export default {
 			}
 		},
 
-		extractTextFromPart(part: any, callback: (content: string) => void): void {
+		extractTextFromPart(part: any, callback: TextExtractionCallback): void {
 			if (this.isTextMimeType(part.mimeType) && part.body?.data) {
 				// Use atob for base64 decoding in browser/Pipedream environment
 				const decodedContent = atob(part.body.data);
