@@ -1,7 +1,7 @@
 // File size and validation constants
 export const FILE_SIZE = {
 	BYTES_PER_MB: 1024 * 1024,
-	UNITS: ["Bytes", "KB", "MB", "GB"],
+	UNITS: ["Bytes", "KB", "MB", "GB", "TB"],
 	CONVERSION_FACTOR: 1024,
 	MAX_SIZE_MB: 25,
 	MAX_SIZE_BYTES: 25 * 1024 * 1024,
@@ -62,7 +62,7 @@ export const GMAIL_API = {
 // Folder naming constants
 export const FOLDER_NAME = {
 	MAX_LENGTH: 50,
-	INVALID_CHARS: /[<>:"/\\|?*]/g,
+	INVALID_CHARS: /[<>:"/\\|?*@]/g,
 	FALLBACK: "Unknown Sender",
 } as const;
 
@@ -153,7 +153,6 @@ export const VISION_API = {
 
 		// Branding & Marketing (non-content)
 		"stamp",
-		"emblem",
 		"insignia",
 		"copyright",
 		"brand mark",
@@ -165,7 +164,6 @@ export const VISION_API = {
 		"matrix",
 		"pattern",
 		"grid",
-		"placeholder",
 		"loading",
 		"spinner",
 		"progress",

@@ -52,7 +52,8 @@ export function isImageMimeType(mimeType: string): boolean {
  * @returns Generated filename with timestamp
  */
 export function generateFilename(mimeType: string): string {
-	const extension = mimeType.split("/")[1] || "jpg";
+	const parts = mimeType.split("/");
+	const extension = parts.length > 1 ? parts[1] : "jpg";
 	const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 	return `image_${timestamp}.${extension}`;
 }
@@ -77,6 +78,7 @@ export function createTempFilePath(filename: string, prefix = ""): string {
 export function sanitizeFolderName(name: string): string {
 	return (
 		name
+			.replace(/\s+/g, "_")  // Replace spaces with underscores first
 			.replace(FOLDER_NAME.INVALID_CHARS, "_")
 			.replace(/_{2,}/g, "_")
 			.replace(/^_|_$/g, "")
