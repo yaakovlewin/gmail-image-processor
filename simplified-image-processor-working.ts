@@ -12,6 +12,16 @@ import {
 	FOLDER_NAME
 } from "./common/constants.js";
 
+// Import utility functions
+import {
+	formatFileSize,
+	exceedsMaxSize,
+	isImageMimeType,
+	generateFilename,
+	createTempFilePath,
+	sanitizeFolderName
+} from "./common/utils.js";
+
 // Type definitions
 interface EmailData {
 	id: string;
@@ -325,7 +335,7 @@ export default {
 					email.from || `${parsedFrom.name || 'Unknown'} <${parsedFrom.email}>`,
 			};
 
-			senderInfo.folderName = this.sanitizeFolderName(
+			senderInfo.folderName = sanitizeFolderName(
 				senderInfo.displayName
 			);
 			return senderInfo;
@@ -379,7 +389,7 @@ export default {
 				senderInfo.name = senderInfo.email.split("@")[0] || 'Unknown';
 			}
 			senderInfo.displayName = senderInfo.name || senderInfo.email || 'Unknown';
-			senderInfo.folderName = this.sanitizeFolderName(
+			senderInfo.folderName = sanitizeFolderName(
 				senderInfo.displayName
 			);
 		},
@@ -392,18 +402,6 @@ export default {
 				folderName: "Unknown Sender",
 				rawFrom: fromHeader || "Unknown",
 			};
-		},
-
-		sanitizeFolderName(name: string): string {
-			return (
-				name
-					.replace(FOLDER_NAME.INVALID_CHARS, "_")
-					.replace(/_{2,}/g, "_")
-					.replace(/^_|_$/g, "")
-					.trim()
-					.substring(0, FOLDER_NAME.MAX_LENGTH) ||
-				FOLDER_NAME.FALLBACK
-			);
 		},
 
 		// === IMAGE DETECTION ===
@@ -457,21 +455,21 @@ export default {
 
 		isImageAttachment(part: any): boolean {
 			return (
-				part.body?.attachmentId && this.isImageMimeType(part.mimeType)
+				part.body?.attachmentId && isImageMimeType(part.mimeType)
 			);
 		},
 
 		isSinglePartImageAttachment(payload: any): boolean {
 			return (
 				payload.body?.attachmentId &&
-				this.isImageMimeType(payload.mimeType)
+				isImageMimeType(payload.mimeType)
 			);
 		},
 
 		createAttachmentInfo(part: any, partId: string): ImageAttachment {
 			return {
 				type: "attachment",
-				filename: part.filename || this.generateFilename(part.mimeType),
+				filename: part.filename || generateFilename(part.mimeType),
 				mimeType: part.mimeType,
 				size: part.body.size || 0,
 				attachmentId: part.body.attachmentId,
@@ -539,7 +537,7 @@ export default {
 					return null;
 				}
 
-				if (metadata && this.isImageMimeType(metadata.mimeType)) {
+				if (metadata && isImageMimeType(metadata.mimeType)) {
 					return {
 						type: "drive_link",
 						fileId,
@@ -623,12 +621,13 @@ export default {
 		async processDetectedImage(image: ImageAttachment, emailId: string): Promise<ExtractedImage | null> {
 			try {
 				console.log(`   📎 Processing: ${image.filename}`);
-
-				if (this.exceedsMaxSize(image.size)) {
+				
+				const self = this as any;
+				if (exceedsMaxSize(image.size, self.maxFileSize || 25)) {
 					console.warn(
 						`   ⚠️ Skipping large file: ${
 							image.filename
-						} (${this.formatFileSize(image.size)})`
+						} (${formatFileSize(image.size)})`
 					);
 					return null;
 				}
@@ -707,7 +706,7 @@ export default {
 				const { axios } = await import("@pipedream/platform") as any;
 				const fs = await import("fs") as any;
 
-				const tmpFilePath = this.createTempFilePath(filename);
+				const tmpFilePath = createTempFilePath(filename);
 				const response = await this.makeGmailAttachmentRequest(
 					messageId,
 					attachmentId
@@ -787,7 +786,7 @@ export default {
 			try {
 				const fs = await import("fs") as any;
 				const { axios } = await import("@pipedream/platform") as any;
-				const tmpFilePath = this.createTempFilePath(filename, "drive_");
+				const tmpFilePath = createTempFilePath(filename, "drive_");
 
 				const response = await axios(this, {
 					method: "GET",
@@ -813,42 +812,6 @@ export default {
 					`Failed to download Drive file: ${error.message}`
 				);
 			}
-		},
-
-		// === UTILITY METHODS ===
-		createTempFilePath(filename: string, prefix = ""): string {
-			const timestamp = Date.now();
-			const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, "_");
-			return `/tmp/${timestamp}_${prefix}${sanitizedFilename}`;
-		},
-
-		exceedsMaxSize(fileSize: number): boolean {
-			const self = this as any;
-			const maxSizeBytes =
-				(self.maxFileSize || 25) * FILE_SIZE.BYTES_PER_MB;
-			return fileSize > maxSizeBytes;
-		},
-
-		isImageMimeType(mimeType: string): boolean {
-			return (IMAGE_TYPES as readonly string[]).includes(mimeType);
-		},
-
-		generateFilename(mimeType: string): string {
-			const extension = mimeType.split("/")[1] || "jpg";
-			const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-			return `image_${timestamp}.${extension}`;
-		},
-
-		formatFileSize(bytes: number): string {
-			if (bytes === 0) return "0 Bytes";
-
-			const { UNITS, CONVERSION_FACTOR } = FILE_SIZE;
-			const i = Math.floor(Math.log(bytes) / Math.log(CONVERSION_FACTOR));
-			const size = parseFloat(
-				(bytes / Math.pow(CONVERSION_FACTOR, i)).toFixed(2)
-			);
-
-			return `${size} ${UNITS[i]}`;
 		},
 
 		// === VISION API METHODS ===
